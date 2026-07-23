@@ -150,7 +150,7 @@ Docker has started a new isolated Linux process.
 Screenshot:
 
 ```
-screenshots/01-docker-run.png
+![Running Container](screenshots/01-docker-run.png)
 ```
 
 ---
@@ -182,7 +182,7 @@ Docker containers are visible from the host because they are ordinary Linux proc
 Screenshot:
 
 ```
-screenshots/02-container-pid.png
+![Container PID](screenshots/02-container-pid.png)
 ```
 
 ---
@@ -210,7 +210,7 @@ The container process is simply another process managed by Linux.
 Screenshot:
 
 ```
-screenshots/03-host-process.png
+![Host Process](screenshots/03-host-process.png)
 ```
 
 ---
@@ -242,7 +242,7 @@ hostname
 Screenshot:
 
 ```
-screenshots/04-nsenter.png
+![Entering Namespace](screenshots/04-nsenter.png)
 ```
 
 ---
