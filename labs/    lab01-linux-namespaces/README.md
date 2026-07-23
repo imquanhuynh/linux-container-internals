@@ -170,7 +170,7 @@ docker inspect --format '{{ .State.Pid }}' my-test-nginx
 Example:
 
 ```
-34872
+1798
 ```
 
 ## Observation
@@ -196,13 +196,7 @@ Confirm that the process actually exists on the host.
 ## Command
 
 ```bash
-ps -fp 34872
-```
-
-or
-
-```bash
-ps aux | grep 34872
+ps aux | grep 1798
 ```
 
 ## Observation
@@ -243,22 +237,6 @@ After entering:
 
 ```bash
 hostname
-```
-
-```bash
-ps aux
-```
-
-Example:
-
-```
-PID USER COMMAND
-
-1 root nginx
-
-7 root nginx
-
-8 root nginx
 ```
 
 Screenshot:
@@ -317,7 +295,6 @@ screenshots/
 
 04-nsenter.png
 
-05-container-process.png
 ```
 
 ---
