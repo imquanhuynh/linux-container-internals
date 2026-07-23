@@ -149,9 +149,7 @@ Docker has started a new isolated Linux process.
 
 Screenshot:
 
-```
 ![Running Container](screenshots/01-docker-run.png)
-```
 
 ---
 
@@ -181,9 +179,7 @@ Docker containers are visible from the host because they are ordinary Linux proc
 
 Screenshot:
 
-```
 ![Container PID](screenshots/02-container-pid.png)
-```
 
 ---
 
@@ -209,9 +205,7 @@ The container process is simply another process managed by Linux.
 
 Screenshot:
 
-```
 ![Host Process](screenshots/03-host-process.png)
-```
 
 ---
 
@@ -241,11 +235,7 @@ hostname
 
 Screenshot:
 
-```
 ![Entering Namespace](screenshots/04-nsenter.png)
-```
-
----
 
 # Observation
 
@@ -284,18 +274,13 @@ This experiment proves that Docker containers are isolated Linux processes shari
 
 # Screenshots
 
-```
-screenshots/
-
-01-docker-run.png
-
-02-container-pid.png
-
-03-host-process.png
-
-04-nsenter.png
-
-```
+| Step | Screenshot |
+|------|------------|
+| Step 1 | ![](screenshots/01-docker-run.png) |
+| Step 2 | ![](screenshots/02-container-pid.png) |
+| Step 3 | ![](screenshots/03-host-process.png) |
+| Step 4 | ![](screenshots/04-nsenter.png) |
+| Verification | ![](screenshots/05-namespace-verification.png) |
 
 ---
 
