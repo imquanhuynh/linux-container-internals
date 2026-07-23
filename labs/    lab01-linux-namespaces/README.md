@@ -97,11 +97,11 @@ The goal is to compare what the host operating system sees versus what the conta
 
 | Component        | Version              |
 | ---------------- | -------------------- |
-| Operating System | Ubuntu 24.04 LTS     |
-| Linux Kernel     | 6.x                  |
-| Docker Engine    | Latest Stable        |
+| Operating System | Ubuntu 24.04.4 LTS   |
+| Linux Kernel     | 6.8.0-90-generic     |
+| Docker Engine    | version 29.1.3       |
 | Container Image  | nginx:latest         |
-| Utility          | nsenter (util-linux) |
+| Utility          | util-linux 2.39.3    |
 
 ---
 
