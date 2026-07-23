@@ -1,49 +1,42 @@
-Linux Container Internals
+# Linux Container Internals
 
-Hands-on experiments exploring how Linux Kernel powers modern container technologies.
+A hands-on repository documenting my journey to understand how Docker works internally using native Linux Kernel features.
 
-📖 Overview
+The goal of this repository is to explore the technologies behind containers instead of treating Docker as a black box.
 
-Modern container platforms such as Docker, containerd, CRI-O and Kubernetes are all built on top of Linux Kernel primitives.
+## Topics
 
-Instead of treating Docker as a black box, this repository documents practical experiments that demonstrate how containers actually work under the hood.
+- Linux Namespaces
+- cgroups
+- OverlayFS
+- Process Isolation
+- Network Namespace
+- PID Namespace
+- Mount Namespace
+- UTS Namespace
 
-Every lab focuses on understanding one Linux Kernel feature through hands-on exercises.
+---
 
-🎯 Objectives
+## Labs
 
-This repository aims to:
+| Lab | Topic | Status |
+|------|------|--------|
+| Lab 01 | Exploring PID Namespace with nsenter | ✅ |
+| Lab 02 | Understanding cgroups | Coming Soon |
+| Lab 03 | OverlayFS | Coming Soon |
+| Lab 04 | Network Namespace | Coming Soon |
 
-Understand Linux Namespaces
-Learn how cgroups limit resources
-Explore OverlayFS and Copy-on-Write
-Analyze Docker networking internals
-Study container security
-Build production-ready DevOps knowledge
-🧱 Repository Structure
-labs/
-    lab01-linux-pid-namespace/
-    lab02-cgroups/
-    lab03-overlayfs/
-    ...
-📚 Learning Roadmap
-Lab	Topic	Status
-01	Linux PID Namespace	✅ Completed
-02	Linux cgroups	🚧
-03	OverlayFS	🚧
-04	Network Namespace	🚧
-05	Virtual Ethernet (veth)	🚧
-06	iptables / NAT	🚧
-07	Rootless Containers	🚧
-08	Linux Capabilities	🚧
-09	Seccomp	🚧
-10	Container Runtime	🚧
-🖥 Environment
-Ubuntu Server
-Docker Engine
-Linux Kernel
-Bash
-Git
-🎯 Goal
+---
 
-This repository is maintained as a long-term engineering notebook documenting my journey from Linux Administration to DevOps and DevSecOps.
+## Why this repository?
+
+Docker itself does not create containers.
+
+Containers are built using existing Linux Kernel features such as:
+
+- Namespaces
+- cgroups
+- OverlayFS
+- Capabilities
+
+This repository documents experiments proving those concepts using practical labs.
