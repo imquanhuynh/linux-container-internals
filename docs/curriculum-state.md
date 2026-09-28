@@ -19,8 +19,8 @@ https://github.com/imquanhuynh/linux-container-internals
 | # | Topic | Status | Evidence / Notes |
 |---|---|---|---|
 | 01 | Linux PID Namespace | ✅ Done | Root README marks the lab completed; historical lab documentation exists in commit history. Do not reteach the core concept. |
-| 02 | Linux cgroups | ⏭️ Next | No current lab02-cgroups README found. This is the next allowed topic. |
-| 03 | OverlayFS / Copy-on-Write | 🟡 In Progress | labs/lab02-overlayfs/README.md exists, but the screenshots directory is empty. Treat as incomplete until the experiment is reproduced and documented. |
+| 02 | Linux cgroups | 🟡 In Progress | Lab scaffold and command sheet created; experiment evidence is not yet recorded. This is the current allowed topic. |
+| 03 | OverlayFS / Copy-on-Write | ⏳ Next after cgroups | Existing README is documentation-only and screenshots directory is empty. Convert it to an evidence-backed lab after cgroups is Done. |
 | 04 | Network Namespace | ⏳ Planned | Blocked by previous prerequisites. |
 | 05 | veth Pair + Linux Bridge | ⏳ Planned | Blocked by previous prerequisites. |
 | 06 | iptables + NAT | ⏳ Planned | Blocked by previous prerequisites. |
@@ -33,7 +33,7 @@ https://github.com/imquanhuynh/linux-container-internals
 
 1. Never infer completion from a README existing alone.
 2. A lab is **Done** only when there is reproducible evidence: commands/output plus relevant screenshots/diagram and lessons learned.
-3. If a topic has a partially written README but lacks evidence, status is **In Progress**.
+3. If a topic has a partial scaffold or README but lacks evidence, status is **In Progress**.
 4. Do not skip cgroups to work on OverlayFS merely because OverlayFS documentation already exists.
 5. Do not advance beyond a prerequisite because of the calendar.
 6. If the user reports a lab was completed locally but GitHub evidence is missing, treat it as **Continue** and make evidence/documentation the next task.
