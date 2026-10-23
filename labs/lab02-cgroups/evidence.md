@@ -1,84 +1,166 @@
 # Lab 02 — Evidence Record
 
-> Fill this file with outputs from your own Ubuntu VM. Do not paste simulated output.
+> Status: In Progress. Fill this file with output from the target Ubuntu VM only. Do not paste simulated or assistant-generated output as actual evidence.
 
 ## Environment
 
-- Date/time:
-- OS:
+- Date/time and timezone:
+- OS and version:
 - Kernel:
-- Docker Engine:
+- Shell:
+- Docker Engine / CLI:
+- stress-ng:
 - cgroup filesystem:
-- cgroup controllers:
+- cgroup mount options:
+- Available controllers:
+- Enabled child controllers:
+- VM type / resource allocation (if known):
 
-## CPU Experiment
+## Preflight
 
 ### Command
-```text
 
-```
+    sudo bash labs/lab02-cgroups/preflight.sh
 
-### Actual Output
-```text
+### Actual output
 
-```
+    [Paste the complete actual output here.]
+
+### Expected vs actual
+
+- Expected:
+- Actual:
+- Result: Pass / Fail / Not run
+
+## Cgroup setup
+
+### Commands
+
+    sudo mkdir /sys/fs/cgroup/devops-cgroups-lab
+    echo "+cpu +memory" | sudo tee /sys/fs/cgroup/cgroup.subtree_control
+    cat /sys/fs/cgroup/cgroup.subtree_control
+    cat /sys/fs/cgroup/devops-cgroups-lab/cgroup.controllers
+
+### Actual output
+
+    [Paste actual output and any error.]
 
 ### Observation
 
-## Memory Experiment
+- Was the hierarchy writable/delegated?
+- Were both controllers available to the child cgroup?
+- If setup failed, what evidence supports the diagnosis?
 
-### Command
-```text
+## CPU experiment
 
-```
+### Configuration and commands
 
-### Actual Output
-```text
+    cat /sys/fs/cgroup/devops-cgroups-lab/cpu.max
+    cat /sys/fs/cgroup/devops-cgroups-lab/cpu.stat
+    sudo bash -c 'echo $$ > /sys/fs/cgroup/devops-cgroups-lab/cgroup.procs; exec stress-ng --cpu 1 --timeout 30s'
+    cat /sys/fs/cgroup/devops-cgroups-lab/cpu.stat
 
-```
+### Actual output
 
-### Observation
+    [Paste cpu.max, cpu.stat before/after, workload exit status and errors.]
 
-## Docker Resource Limits
+### Expected vs actual
 
-### Command
-```text
+- Expected:
+- Actual:
+- Did nr_throttled change?
+- Did throttled_usec change?
+- Result: Pass / Fail / Not run
 
-```
+## Memory experiment
 
-### Actual Output
-```text
+### Configuration and commands
 
-```
+    echo "134217728" | sudo tee /sys/fs/cgroup/devops-cgroups-lab/memory.max
+    cat /sys/fs/cgroup/devops-cgroups-lab/memory.events
+    sudo bash -c 'echo $$ > /sys/fs/cgroup/devops-cgroups-lab/cgroup.procs; exec python3 -c "a=bytearray(268435456); import time; time.sleep(5)"'
+    cat /sys/fs/cgroup/devops-cgroups-lab/memory.current
+    cat /sys/fs/cgroup/devops-cgroups-lab/memory.events
 
-### Docker → cgroups Analysis
+### Actual output
+
+    [Paste memory.max, memory.events before/after, exit status and errors.]
+
+### Expected vs actual
+
+- Expected:
+- Actual:
+- Did oom or oom_kill increment?
+- Result: Pass / Fail / Not run
+
+Do not claim OOM was the cause unless the counters, exit status and related logs support that conclusion.
+
+## Docker resource limits
+
+### Commands
+
+    LAB_CONTAINER="cgroups-lab-$(date +%s)"
+    docker run -d --name "$LAB_CONTAINER" --memory=128m --cpus=0.5 busybox sh -c 'sleep 60'
+    docker inspect --format 'Memory={{.HostConfig.Memory}} NanoCpus={{.HostConfig.NanoCpus}}' "$LAB_CONTAINER"
+    docker stats --no-stream "$LAB_CONTAINER"
+    docker rm -f "$LAB_CONTAINER"
+
+### Actual output
+
+    [Paste docker run, inspect, stats and cleanup output.]
+
+### Docker → cgroups analysis
+
+- What values did docker inspect report?
+- What did docker stats show while the container was running?
+- If unavailable, what exact error was returned?
 
 ## Troubleshooting
 
-Problem:
+- Problem:
+- Exact error / evidence:
+- Hypothesis:
+- Verified root cause, or why it remains unverified:
+- Fix or safe next step:
+- Verification after fix:
 
-Evidence:
+## Production insight
 
-Diagnosis:
+[Explain what the observed counters mean for CPU fairness, memory containment, noisy neighbors or incident response.]
 
-Fix:
+## Security insight
 
-Verification:
+[Explain how resource limits reduce resource-exhaustion risk and what other isolation controls remain necessary.]
 
-## Lessons Learned
+## Interview question
+
+How would you distinguish a cgroup OOM kill from an application crash when a container exits under a memory limit?
+
+[Write an evidence-based answer using exit status, logs, memory.events and the configured limit.]
+
+## Lessons learned
 
 - 
 - 
 - 
 
-## Evidence Checklist
+## Evidence attachments
 
-- [ ] cgroups v2 verified
-- [ ] CPU limit reproduced
-- [ ] cpu.stat captured
-- [ ] memory limit reproduced
-- [ ] memory.events captured
-- [ ] Docker resource limits observed
-- [ ] Screenshot/evidence added
-- [ ] Architecture/flow diagram added
-- [ ] Troubleshooting documented
+- Screenshot path(s):
+- Diagram path:
+- Additional logs:
+
+## Final checklist
+
+- [ ] Environment and tool versions recorded
+- [ ] Preflight output is actual and reproducible
+- [ ] cgroups v2 and controller availability verified
+- [ ] Cgroup setup output or exact blocker recorded
+- [ ] cpu.max and cpu.stat before/after captured
+- [ ] memory.max and memory.events before/after captured
+- [ ] Docker configuration and live stats captured, or exact blocker recorded
+- [ ] Expected vs actual results documented
+- [ ] Troubleshooting distinguishes hypotheses from verified root cause
+- [ ] Production/security insights and lessons learned completed
+- [ ] Screenshot or diagram added where useful
+- [ ] Cleanup completed or remaining processes explained
