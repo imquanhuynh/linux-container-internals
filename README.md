@@ -143,7 +143,7 @@ Each laboratory contains:
 | Lab | Topic                    | Description                       | Status      |
 | --- | ------------------------ | --------------------------------- | ----------- |
 | 01  | Linux PID Namespace      | Process Isolation using `nsenter` | ✅ Completed |
-| 02  | Linux cgroups            | CPU & Memory Resource Limits      | 🚧 Planned  |
+| 02  | Linux cgroups            | CPU & Memory Resource Limits      | 🟡 In Progress |
 | 03  | OverlayFS                | Container Filesystem Architecture | 🚧 Planned  |
 | 04  | Network Namespace        | Container Networking              | 🚧 Planned  |
 | 05  | veth Pair & Linux Bridge | Virtual Networking                | 🚧 Planned  |
