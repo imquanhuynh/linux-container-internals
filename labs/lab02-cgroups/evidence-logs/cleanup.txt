@@ -1,0 +1,10 @@
+LAB 02 — CLEANUP STATUS
+Cleanup verification output was NOT included in the supplied screenshots/archive.
+Status: NOT VERIFIED.
+
+Before cleanup, inspect only the named lab containers:
+  sudo docker ps -a --filter name=lab02-cpu
+  sudo docker ps -a --filter name=lab02-memory
+  sudo docker ps -a --filter name=lab02-memory-oom
+
+Remove a container only after confirming that you created it for this lab. Record actual output here after verification; do not claim cleanup is complete before checking.

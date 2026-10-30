@@ -1,105 +1,202 @@
-# Lab 02 — Linux cgroups v2 CPU & Memory Control
+# Lab 02 — Commands and Guided Experiments
 
-Run on a disposable Ubuntu 24.04 VM with systemd and cgroups v2. Do not run the mutating steps on a production host. Capture actual output; do not paste expected output as evidence.
+Use a disposable Ubuntu VM. Start with read-only checks. Stop if the cgroup mount/controllers are unavailable or the required hierarchy is not safely writable/delegated. Do not force controller changes on the root hierarchy.
 
-## 1. Quick review and read-only preflight
+## 1. Read-only environment checks
 
-    sudo bash labs/lab02-cgroups/preflight.sh
+```bash
+cat /etc/os-release
+uname -r
+nproc
+free -h
+bash --version | head -n 1
+stat -fc %T /sys/fs/cgroup
+findmnt /sys/fs/cgroup
+cat /sys/fs/cgroup/cgroup.controllers
+cat /sys/fs/cgroup/cgroup.subtree_control
+cat /sys/fs/cgroup/cgroup.procs | head
+```
 
-The preflight reports OS/kernel/tool versions, filesystem type, mount options, controllers and writability. It does not change the host. Stop if cgroups v2, CPU/memory controllers, writable mount or delegated hierarchy are not available. Do not remount cgroupfs or force controller changes.
+- `stat -fc %T` should report `cgroup2fs` for a unified cgroups v2 mount.
+- `cgroup.controllers` shows controllers available to child cgroups at that level.
+- `cgroup.subtree_control` shows controllers enabled for child cgroups.
+- These are not interchangeable: available does not necessarily mean enabled for children.
 
-## 2. Inspect the hierarchy
+Run the repository's read-only preflight:
 
-    uname -a
-    cat /etc/os-release
-    findmnt /sys/fs/cgroup
-    stat -fc %T /sys/fs/cgroup
-    cat /sys/fs/cgroup/cgroup.controllers
-    cat /sys/fs/cgroup/cgroup.subtree_control
-    cat /sys/fs/cgroup/cgroup.procs | head
+```bash
+sudo bash labs/lab02-cgroups/preflight.sh
+```
 
-Expected filesystem type is cgroup2fs. Record the actual values and errors.
+If `stress-ng` is not installed, install it only on the disposable lab VM:
 
-## 3. Create a dedicated cgroup
+```bash
+sudo apt-get update
+sudo apt-get install -y stress-ng
+```
 
-Only continue on the disposable lab VM after checking the preflight result and understanding that enabling controllers on the root hierarchy changes host-wide cgroup delegation.
+## 2. Docker CPU experiment (captured evidence)
 
-    sudo mkdir /sys/fs/cgroup/devops-cgroups-lab
-    echo "+cpu +memory" | sudo tee /sys/fs/cgroup/cgroup.subtree_control
-    cat /sys/fs/cgroup/cgroup.subtree_control
-    cat /sys/fs/cgroup/devops-cgroups-lab/cgroup.controllers
+Check for a name collision before creating the container:
 
-If a command fails, stop and capture the exact error plus cgroup.type, cgroup.procs and cgroup.subtree_control. Do not repeatedly retry or change systemd configuration without evidence.
+```bash
+sudo docker ps -a --filter name=lab02-cpu
+```
 
-## 4. CPU quota and throttling
+If no pre-existing container with this name belongs to another task, create the workload:
 
-A value of 20000 100000 means a 20,000-microsecond quota per 100,000-microsecond period, approximately 20% of one logical CPU.
+```bash
+sudo docker run -d \
+  --name lab02-cpu \
+  --cpus=0.5 \
+  --memory=128m \
+  python:3.12-slim \
+  python -c 'import time; end=time.time()+120; x=0
+while time.time()<end:
+    x=(x+1)%1000003'
+```
 
-    echo "20000 100000" | sudo tee /sys/fs/cgroup/devops-cgroups-lab/cpu.max
-    cat /sys/fs/cgroup/devops-cgroups-lab/cpu.max
-    echo "CPU stats before:"
-    cat /sys/fs/cgroup/devops-cgroups-lab/cpu.stat
-    sudo bash -c 'echo $$ > /sys/fs/cgroup/devops-cgroups-lab/cgroup.procs; exec stress-ng --cpu 1 --timeout 30s'
-    echo "CPU stats after:"
-    cat /sys/fs/cgroup/devops-cgroups-lab/cpu.stat
+Inspect Docker's configured values:
 
-The shell is moved into the target cgroup before it execs stress-ng, so stress-ng workers inherit the cgroup. Compare nr_throttled and throttled_usec before and after; CPU usage alone does not prove throttling. If stress-ng is missing, install it on the lab VM with apt before running the experiment.
+```bash
+sudo docker inspect lab02-cpu \
+  --format 'NanoCPUs={{.HostConfig.NanoCpus}} Memory={{.HostConfig.Memory}}'
+```
 
-## 5. Memory limit and OOM observation
+Inspect the cgroup controls and counters:
 
-The cgroup memory.max interface expects bytes or the word max. 134217728 bytes equals 128 MiB.
+```bash
+sudo docker exec lab02-cpu cat /sys/fs/cgroup/cpu.max
+sudo docker exec lab02-cpu cat /sys/fs/cgroup/cpu.stat
+sleep 5
+sudo docker exec lab02-cpu cat /sys/fs/cgroup/cpu.stat
+```
 
-    echo "134217728" | sudo tee /sys/fs/cgroup/devops-cgroups-lab/memory.max
-    cat /sys/fs/cgroup/devops-cgroups-lab/memory.max
-    echo "Memory events before:"
-    cat /sys/fs/cgroup/devops-cgroups-lab/memory.events
-    sudo bash -c 'echo $$ > /sys/fs/cgroup/devops-cgroups-lab/cgroup.procs; exec python3 -c "a=bytearray(268435456); import time; time.sleep(5)"'
-    echo "Workload exit status: $?"
-    cat /sys/fs/cgroup/devops-cgroups-lab/memory.current
-    echo "Memory events after:"
-    cat /sys/fs/cgroup/devops-cgroups-lab/memory.events
+`--cpus=0.5` normally corresponds to 50,000 microseconds of quota per 100,000 microsecond period, but record the actual `cpu.max` output. Compare `nr_throttled` and `throttled_usec` before/after; do not infer throttling from the configured limit alone.
 
-The workload attempts a 256 MiB allocation under a 128 MiB limit. Depending on memory accounting and available memory, it may be OOM-killed. Compare the actual before/after oom and oom_kill counters and record the actual exit status. Do not claim an OOM kill unless the evidence supports it.
+## 3. Docker memory experiment (captured evidence)
 
-## 6. Docker resource limits
+Check the name before creating the container:
 
-This uses a uniquely named, short-lived container so docker stats can inspect it while it is running.
+```bash
+sudo docker ps -a --filter name=lab02-memory
+```
 
-    LAB_CONTAINER="cgroups-lab-$(date +%s)"
-    docker run -d --name "$LAB_CONTAINER" --memory=128m --cpus=0.5 busybox sh -c 'sleep 60'
-    docker inspect --format 'Memory={{.HostConfig.Memory}} NanoCpus={{.HostConfig.NanoCpus}}' "$LAB_CONTAINER"
-    docker stats --no-stream "$LAB_CONTAINER"
-    docker rm -f "$LAB_CONTAINER"
+If the name is free for this lab:
 
-If Docker is unavailable, record the exact error and mark only the Docker sub-step as unavailable; do not fabricate output. Explain that Docker resource flags are enforced using kernel resource-control mechanisms, including cgroups.
+```bash
+sudo docker run -d \
+  --name lab02-memory \
+  --memory=128m \
+  --memory-swap=128m \
+  python:3.12-slim \
+  python -c 'import time; x=bytearray(64*1024*1024); print("Allocated 64 MiB", flush=True); time.sleep(120)'
+```
 
-## 7. Troubleshooting and cleanup
+Inspect configuration and cgroup state:
 
-If a write fails, capture the exact error before diagnosing. Inspect:
+```bash
+sudo docker inspect lab02-memory \
+  --format 'Memory={{.HostConfig.Memory}} MemorySwap={{.HostConfig.MemorySwap}}'
+sudo docker exec lab02-memory cat /sys/fs/cgroup/memory.max
+sudo docker exec lab02-memory cat /sys/fs/cgroup/memory.current
+sudo docker exec lab02-memory cat /sys/fs/cgroup/memory.events
+sudo docker inspect lab02-memory \
+  --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}}'
+sudo docker logs lab02-memory
+```
 
-    cat /sys/fs/cgroup/cgroup.type
-    cat /sys/fs/cgroup/cgroup.procs | head
-    cat /sys/fs/cgroup/cgroup.subtree_control
-    cat /sys/fs/cgroup/devops-cgroups-lab/cgroup.controllers
+`memory.max` uses bytes or `max`, not a human-readable string. `memory.current` is the cgroup's currently accounted memory, not just the Python allocation. A zero `oom`/`oom_kill` counter means no such event was observed in that captured interval.
 
-Distinguish cgroup v1/v2, missing controllers, a read-only mount, systemd delegation and the cgroups v2 no-internal-process rule. Call a cause "verified root cause" only when output supports it.
+## 4. Direct child-cgroup experiment — do not bypass safety checks
 
-Before cleanup, confirm the lab workload has exited and the lab cgroup has no processes:
+The original lab requires a direct cgroup experiment. Before running any writes, review the preflight and root hierarchy state:
 
-    cat /sys/fs/cgroup/devops-cgroups-lab/cgroup.procs
-    sudo rmdir /sys/fs/cgroup/devops-cgroups-lab
+```bash
+cat /sys/fs/cgroup/cgroup.type
+cat /sys/fs/cgroup/cgroup.controllers
+cat /sys/fs/cgroup/cgroup.subtree_control
+cat /sys/fs/cgroup/cgroup.procs | head
+findmnt -no OPTIONS /sys/fs/cgroup
+```
 
-Do not blindly disable controllers on the root cgroup; other services may depend on the hierarchy. If processes remain, identify and stop only the lab workload.
+**Important:** Writing `+cpu +memory` into `/sys/fs/cgroup/cgroup.subtree_control` changes root-level controller delegation and can fail because of systemd hierarchy rules or processes in the root cgroup. Do not run that write blindly, do not remount cgroupfs, and do not change systemd configuration to force the lab to pass. If the VM does not provide a delegated writable subtree, record the exact blocker and use an appropriately delegated disposable lab environment.
 
-## Evidence checklist
+Only inside a cgroup subtree explicitly delegated for this lab, create a child cgroup and verify controllers are available before proceeding. Use the delegated path supplied by the environment rather than assuming `/sys/fs/cgroup` is writable. Record:
+- exact delegated path and ownership/permissions;
+- `cgroup.controllers` and `cgroup.subtree_control`;
+- the child cgroup's `cpu.max` and `memory.max`;
+- `cgroup.procs` before and after placing a controlled workload;
+- `cpu.stat` and `memory.events` before/after;
+- exact errors if any write is rejected.
 
-- [ ] OS, kernel, Bash, Docker and stress-ng versions recorded
-- [ ] cgroups v2, mount options and controller availability verified
-- [ ] Exact cgroup creation/controller-enable output recorded
-- [ ] cpu.max and cpu.stat before/after captured
-- [ ] memory.max and memory.events before/after captured
-- [ ] Docker inspect configuration and live stats captured, or exact blocker recorded
-- [ ] Expected vs actual, troubleshooting and verified root cause documented
-- [ ] Production/security insights and lessons learned written
-- [ ] Screenshot or diagram added where useful
-- [ ] Evidence file contains only actual observations from the lab VM
+Do not move your interactive shell or unrelated processes into a cgroup. A safe pattern is to start a dedicated short-lived child process directly in the target cgroup, and verify its PID in `cgroup.procs`.
+
+## 5. Optional controlled OOM experiment
+
+Optional only; use a disposable VM and do not run on production. A container may be OOM-killed.
+
+```bash
+sudo docker ps -a --filter name=lab02-memory-oom
+```
+
+If the name is unused by another task:
+
+```bash
+sudo docker run -d \
+  --name lab02-memory-oom \
+  --memory=64m \
+  --memory-swap=64m \
+  python:3.12-slim \
+  python -c 'import time; x=bytearray(160*1024*1024); print("Allocated 160 MiB", flush=True); time.sleep(120)'
+```
+
+Check actual result:
+
+```bash
+sudo docker inspect lab02-memory-oom \
+  --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}}'
+sudo docker logs lab02-memory-oom
+```
+
+Do not claim an OOM kill unless Docker state, exit status, logs, and/or before/after memory event counters support the conclusion.
+
+## 6. Cleanup
+
+Inspect only the lab containers first:
+
+```bash
+sudo docker ps -a \
+  --filter name=lab02-cpu \
+  --filter name=lab02-memory \
+  --filter name=lab02-memory-oom
+```
+
+Remove only containers that you personally created for this lab:
+
+```bash
+sudo docker rm -f lab02-cpu lab02-memory lab02-memory-oom
+```
+
+Omit names for experiments you did not run. This removes containers, not images. For direct cgroups, verify the child cgroup has no processes before removing it; do not disable root controllers blindly.
+
+## 7. Save actual command output
+
+Capture actual output on the lab VM, for example:
+
+```bash
+mkdir -p labs/lab02-cgroups/evidence-logs
+{
+  date --iso-8601=seconds
+  cat /etc/os-release
+  uname -r
+  nproc
+  free -h
+  stat -fc %T /sys/fs/cgroup
+  findmnt /sys/fs/cgroup
+  cat /sys/fs/cgroup/cgroup.controllers
+  cat /sys/fs/cgroup/cgroup.subtree_control
+} 2>&1 | tee labs/lab02-cgroups/evidence-logs/environment-and-cgroups.txt
+```
+
+Only save logs from commands actually run. Do not copy example numbers into evidence logs.

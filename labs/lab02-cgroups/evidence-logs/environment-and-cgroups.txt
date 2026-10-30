@@ -1,0 +1,18 @@
+LAB 02 — ENVIRONMENT / CGROUPS EVIDENCE
+Source: manually transcribed from user-provided screenshot 01-environment.png and 02-cgroups-v2.png.
+This is NOT a raw terminal capture. Re-run the commands in commands.md to generate raw output.
+
+Observed values:
+OS: Ubuntu 26.04.1 LTS (resolute)
+Kernel: 7.0.0-42-generic
+CPU visible to VM: 2
+RAM: approximately 3.3 GiB total; approximately 2.6 GiB available at capture time
+Swap: 0 B
+cgroup filesystem type: cgroup2fs
+Available controllers shown: cpuset cpu io memory hugetlb pids rdma misc dmem
+
+Not established by these screenshots:
+- exact cgroup mount options
+- exact cgroup.subtree_control contents (unless separately visible in screenshot)
+- a writable delegated child-cgroup path
+- direct child-cgroup creation or process placement

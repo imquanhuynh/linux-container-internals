@@ -1,0 +1,19 @@
+LAB 02 — CPU EVIDENCE
+Source: manually transcribed from user-provided screenshots 03-cpu-limit.png and 04-cpu-throttling.png.
+This is NOT a raw terminal capture. Re-run the commands in commands.md to generate raw output.
+
+Docker inspect values observed:
+NanoCPUs=500000000
+Memory=134217728 bytes
+
+Observed cpu.stat samples:
+Counter             Sample 1       Sample 2       Delta
+usage_usec          3769372        7779081        +4009709
+user_usec           3719526        7720329        +4000803
+system_usec         49846          58751          +8905
+nr_periods          75             155            +80
+nr_throttled        74             154            +80
+throttled_usec      3628205        7696468        +4068263
+
+Interpretation: CPU usage increased and throttling counters increased during the observation interval.
+Actual cpu.max: NOT CAPTURED in supplied screenshots; capture it from the container if it still exists.

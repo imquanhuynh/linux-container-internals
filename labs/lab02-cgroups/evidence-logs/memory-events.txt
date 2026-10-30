@@ -1,0 +1,27 @@
+LAB 02 — MEMORY EVIDENCE
+Source: manually transcribed from user-provided screenshots 05-memory-limit.png and 06-memory-events.png.
+This is NOT a raw terminal capture. Re-run the commands in commands.md to generate raw output.
+
+Docker inspect values observed:
+Memory=134217728 bytes
+MemorySwap=134217728 bytes
+
+Cgroup values observed:
+memory.max=134217728 bytes
+memory.current=71589888 bytes (approximately 68.25 MiB)
+
+memory.events observed:
+low=0
+high=0
+max=0
+oom=0
+oom_kill=0
+oom_group_kill=0
+sock_throttled=0
+
+Container state observed:
+Status=running
+ExitCode=0
+OOMKilled=false
+Application output included “Allocated 64 MiB” twice; screenshots do not establish why. Do not infer a restart without checking RestartCount and timestamps.
+Interpretation: no memory-limit/OOM event was observed in this captured sample. This does not demonstrate an OOM kill.

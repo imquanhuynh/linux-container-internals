@@ -1,119 +1,79 @@
 # Lab 02 — Linux cgroups v2: CPU & Memory Control
 
-> Status: In Progress  
-> Category: Linux Kernel Internals / Resource Management  
-> Estimated time: 45–60 minutes  
-> Target environment: disposable Ubuntu 24.04 LTS VM, Linux kernel 6.x
+> **Overall status: IN PROGRESS.** Docker CPU/memory observations are documented from six user-provided screenshots. Direct child-cgroup/process-placement evidence, the actual `cpu.max` output, and cleanup verification are still missing.
 
 ## Objective
 
-Understand how cgroups v2 constrain process resources and how Docker exposes CPU and memory limits through Linux kernel resource-control mechanisms.
+Understand how Linux cgroups v2 organize processes and enforce resource limits, and compare Docker resource flags with kernel cgroup controls.
 
 ## Learning goals
 
-- Identify cgroups v2 and available controllers.
-- Understand cgroup.controllers, cgroup.subtree_control, cgroup.procs, cpu.max, cpu.stat, memory.max and memory.events.
-- Create a dedicated cgroup and move a controlled workload into it.
-- Observe CPU throttling and memory-limit/OOM counters.
-- Compare direct cgroup controls with Docker resource flags.
-- Record actual evidence, troubleshooting and security implications.
+- Verify cgroups v2 and CPU/memory controller availability.
+- Explain `cgroup.controllers`, `cgroup.subtree_control`, `cgroup.procs`, `cpu.max`, `cpu.stat`, `memory.max`, `memory.current`, and `memory.events`.
+- Apply and observe CPU and memory limits in Docker.
+- Compare counters before and after a workload.
+- Record real output, errors, cleanup, and security implications.
 
-## Safety and prerequisites
+## Mental model
 
-Use a disposable lab VM, not a production host. Enabling controllers at the root hierarchy can affect host-wide cgroup delegation. Do not remount cgroupfs, force controller changes or alter systemd configuration to make the lab pass.
+```text
+Docker flags (--cpus / --memory)
+              |
+              v
+       Docker configures cgroups
+              |
+              v
+   cgroups v2 control files and counters
+              |
+              v
+      Linux kernel enforces limits
+              |
+              v
+            Process
+```
 
-Run the read-only preflight first:
+Cgroups do not create a separate CPU or RAM pool. They group processes and let the kernel account for and constrain resource use.
 
-    sudo bash labs/lab02-cgroups/preflight.sh
+## Files
 
-Stop if the filesystem is not cgroup2fs, CPU or memory controllers are unavailable, the mount is read-only, or the hierarchy is not writable/delegated. A successful basic preflight is not proof that every later write will succeed.
+- `commands.md` — guided experiments, safety checks, and commands.
+- `preflight.sh` — read-only environment/cgroups preflight.
+- `evidence.md` — lab record and acceptance checklist.
+- `results/2026-10-30-docker-experiment.md` — analysis of the supplied screenshots.
+- `evidence-logs/` — evidence transcribed from screenshots, plus explicit notes for evidence not yet captured. These are **not raw terminal captures**.
+- `screenshots/` — six original terminal screenshots supplied for this lab.
+- `APPLY-TO-REPO-WINDOWS.md` — safe instructions for merging this package into the existing Windows Git working tree.
 
-## Architecture
+## What the current evidence supports
 
-    Docker flags (--cpus / --memory)
-                 |
-                 v
-       Container runtime configures cgroups
-                 |
-                 v
-       cgroups v2: cpu.max / memory.max
-                 |
-                 v
-          Kernel enforces limits
-                 |
-                 v
-             Workload
+- Ubuntu 26.04.1 LTS, kernel `7.0.0-42-generic`, 2 visible CPUs, approximately 3.3 GiB RAM, no swap.
+- Unified cgroups v2 filesystem (`cgroup2fs`) and CPU/memory controllers listed as available.
+- Docker CPU configuration equivalent to 0.5 CPU; `nr_throttled` and `throttled_usec` increased between captured samples.
+- Docker memory limit of 128 MiB; observed current usage was below that limit.
+- No OOM event was observed in the captured memory sample.
 
-The direct Linux experiment writes the same cgroup control files without Docker.
+## Remaining work
 
-## Lab workflow
+1. Capture actual `cpu.max` output from the running CPU container, if it still exists.
+2. Complete a direct child-cgroup/process-placement experiment only in an explicitly delegated, writable subtree; otherwise record the exact verified blocker.
+3. Capture actual preflight and cleanup command output.
+4. Update the repository's curriculum state only after its acceptance criteria are satisfied.
+5. Review changes, commit, and push only after checking the final diff.
 
-1. Inspect OS, kernel, cgroup filesystem, mount options and controllers.
-2. Create a dedicated child cgroup on the disposable VM.
-3. Enable CPU and memory controllers only after the preflight and safety checks.
-4. Apply a CPU quota and compare cpu.stat before/after a workload.
-5. Apply a memory limit and compare memory.events before/after an allocation.
-6. Run a short Docker container with CPU/memory limits and inspect its configuration and live stats.
-7. Record actual output, errors, diagnosis and cleanup in evidence.md.
+## Safety
 
-Follow the commands in commands.md. Do not copy expected output into the evidence record.
-
-## Important interface details
-
-- cpu.max uses quota and period in microseconds. For example, 20000 100000 is approximately 20% of one logical CPU.
-- memory.max accepts a byte count or max; 134217728 bytes is 128 MiB. Do not write a human-readable value such as 128M to this kernel interface.
-- cpu.stat counters such as nr_throttled and throttled_usec help establish CPU throttling.
-- memory.events counters such as oom and oom_kill help investigate memory-limit events. Interpret before/after deltas alongside exit status and logs.
-- Move the shell into the target cgroup before exec-ing a workload so child processes inherit the intended cgroup; launching workers first and moving only the parent can create a race.
-
-## Troubleshooting
-
-If enabling controllers or moving a process fails, capture the exact error first. Inspect:
-
-    cat /sys/fs/cgroup/cgroup.type
-    cat /sys/fs/cgroup/cgroup.procs | head
-    cat /sys/fs/cgroup/cgroup.subtree_control
-    cat /sys/fs/cgroup/devops-cgroups-lab/cgroup.controllers
-
-Possible causes include cgroup v1 rather than v2, unavailable controllers, a read-only mount, systemd delegation, or cgroups v2 hierarchy rules. Treat these as hypotheses until output verifies the cause.
-
-## Production insight
-
-cgroups support CPU fairness, memory containment, capacity planning and noisy-neighbor control. Configured limits are not the same as observed usage; counters and workload behavior provide the evidence needed for incident analysis.
-
-## Security insight
-
-Resource limits reduce the blast radius of CPU or memory exhaustion and can help mitigate denial-of-service conditions. They do not replace namespaces, Linux capabilities, seccomp, AppArmor/SELinux or network controls.
-
-## Interview question
-
-A container configured with a 128 MiB memory limit exits unexpectedly. How would you distinguish a cgroup OOM kill from an application crash?
-
-A strong answer correlates the container exit status and logs with the configured memory limit and before/after cgroup memory.events counters. Do not infer OOM solely from the fact that the process exited.
-
-## Lessons learned
-
-Complete this section only after running the experiments:
-
-- What problem do cgroups solve?
-- What does cpu.max mean?
-- What evidence demonstrates throttling?
-- What does memory.max enforce, and how do oom/oom_kill counters help?
-- How do Docker resource flags relate to kernel cgroups?
-- What failed, what evidence supports the diagnosis, and what would you change in production?
+Use a disposable VM. Do not force-enable controllers at the root hierarchy, remount cgroupfs, change systemd delegation on a production host, or move your shell/unrelated processes into a test cgroup. OOM experiments are optional and only for a disposable VM.
 
 ## Definition of Done
 
-- [ ] cgroups v2 and controllers verified on the target VM.
-- [ ] Dedicated cgroup created and workload placement verified.
-- [ ] CPU quota tested with actual cpu.stat before/after.
-- [ ] Memory limit tested with actual memory.events before/after.
-- [ ] Docker limits inspected and live stats captured, or exact blocker recorded.
-- [ ] Troubleshooting and lessons learned documented.
-- [ ] evidence.md completed using actual VM output.
-- [ ] Screenshot/diagram added where useful.
-- [ ] README/commands reviewed and commit pushed.
+- [ ] cgroups v2 and CPU/memory controller availability verified.
+- [ ] Direct child cgroup created safely, or a specific blocker captured.
+- [ ] Workload placement verified using `cgroup.procs`.
+- [ ] Actual `cpu.max` and `cpu.stat` before/after captured.
+- [ ] `memory.max` and `memory.events` before/after captured.
+- [x] Docker CPU/memory configuration and screenshot-based observations documented.
+- [ ] Raw command output and cleanup verification saved.
+- [ ] Screenshots/logs accurately labelled and reviewed.
+- [ ] Changes reviewed and committed to GitHub.
 
-## Next lab
-
-Only after Lab 02 has reproducible evidence: Lab 03 — OverlayFS / Copy-on-Write.
+**Do not mark the overall lab complete based only on Docker screenshots.**
