@@ -38,6 +38,7 @@ From the repository root, switch to the rebuild branch and run the read-only pre
 
 ```bash
 cd ~/linux-container-internals
+git fetch origin
 git switch lab02-rebuild-2026-11
 git status --short --branch
 bash labs/lab02-cgroups-v2/scripts/preflight.sh
@@ -248,7 +249,7 @@ set -o pipefail
 
   echo "=== CHILD cgroup.procs ==="
   cat "$CHILD/cgroup.procs"
-  grep -Fx "$PID" "$CHILD/cgroup.procs"
+  grep -Fx "$PID" "$CHILD/cgroup.procs" || exit 1
   ps -o pid,stat,comm -p "$PID"
 
   echo "=== STOP TEST PROCESS ==="
@@ -258,7 +259,7 @@ set -o pipefail
 
   echo "=== VERIFY EMPTY CHILD ==="
   cat "$CHILD/cgroup.procs"
-  rmdir "$CHILD"
+  rmdir "$CHILD" || exit 1
   CHILD=""
   echo "Child cgroup removed successfully"
 } 2>&1 | tee "$OUT/04-child-placement-$STAMP.txt"
